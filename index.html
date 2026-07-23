@@ -273,6 +273,20 @@
     flex-wrap: wrap;
     justify-content: center;
   }
+  .api-config select {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--input);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .api-config select:focus {
+    border-color: var(--accent);
+  }
   .api-config input {
     padding: 8px 12px;
     border-radius: 8px;
@@ -280,7 +294,7 @@
     background: var(--input);
     color: var(--text);
     font-size: 13px;
-    width: 280px;
+    width: 200px;
     outline: none;
     font-family: inherit;
   }
@@ -291,14 +305,47 @@
     padding: 8px 14px;
     border-radius: 8px;
     border: none;
-    background: #e9ecef;
-    color: var(--text);
+    background: var(--accent);
+    color: #fff;
     font-size: 13px;
     cursor: pointer;
     font-family: inherit;
+    font-weight: 600;
   }
   .api-config .btn-save:hover {
-    background: #dee2e6;
+    background: #b0755c;
+  }
+  .api-info {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .api-info-model {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .btn-edit-key, .btn-switch-model {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn-edit-key:hover, .btn-switch-model:hover {
+    background: var(--tag-bg);
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   footer {
@@ -324,8 +371,17 @@
   </header>
 
   <div class="api-config" id="apiConfig">
-    <input type="password" id="apiKey" placeholder="输入 DeepSeek API Key" autocomplete="off">
+    <select id="modelSelect">
+      <option value="deepseek">DeepSeek</option>
+      <option value="kimi">Kimi（月之暗面）</option>
+    </select>
+    <input type="password" id="apiKey" placeholder="输入 API Key" autocomplete="off">
     <button class="btn-save" onclick="saveKey()">保存</button>
+  </div>
+  <div class="api-info" id="apiInfo" style="display:none">
+    <span class="api-info-model" id="apiInfoModel"></span>
+    <button class="btn-switch-model" onclick="switchModel()">切换模型</button>
+    <button class="btn-edit-key" onclick="editKey()">修改Key</button>
   </div>
 
   <div class="tags" id="tagBarScene">
@@ -371,7 +427,21 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'zhujiao_ai_key';
+const PROVIDERS = {
+  deepseek: {
+    name: 'DeepSeek',
+    endpoint: 'https://api.deepseek.com/chat/completions',
+    model: 'deepseek-chat'
+  },
+  kimi: {
+    name: 'Kimi',
+    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+    model: 'moonshot-v1-8k'
+  }
+};
+
+const STORAGE_ACTIVE = 'zhujiao_ai_active';
+
 let activeScene = '';
 let activeDirection = '';
 let lastOutput = '';
@@ -405,28 +475,74 @@ document.getElementById('tagBarDir').addEventListener('click', (e) => {
   }
 });
 
-// --- API Key ---
-function getKey() {
-  return localStorage.getItem(STORAGE_KEY) || '';
+// --- API Key & Model Management ---
+function storageKey(provider) {
+  return 'zhujiao_ai_key_' + provider;
 }
+
+function getActiveProvider() {
+  return localStorage.getItem(STORAGE_ACTIVE) || 'deepseek';
+}
+
+function setActiveProvider(provider) {
+  localStorage.setItem(STORAGE_ACTIVE, provider);
+}
+
+function getKey(provider) {
+  return localStorage.getItem(storageKey(provider || getActiveProvider())) || '';
+}
+
+function getActiveConfig() {
+  const provider = getActiveProvider();
+  return Object.assign({ provider }, PROVIDERS[provider]);
+}
+
 function saveKey() {
+  const provider = document.getElementById('modelSelect').value;
   const key = document.getElementById('apiKey').value.trim();
   if (!key) { alert('请输入 API Key'); return; }
-  localStorage.setItem(STORAGE_KEY, key);
-  document.getElementById('apiConfig').style.display = 'none';
+  localStorage.setItem(storageKey(provider), key);
+  setActiveProvider(provider);
+  showApiInfo();
 }
-document.addEventListener('DOMContentLoaded', () => {
-  const saved = getKey();
-  if (saved) {
-    document.getElementById('apiKey').value = saved.substring(0, 8) + '...';
-    document.getElementById('apiConfig').style.display = 'none';
-  }
+
+function editKey() {
+  document.getElementById('apiConfig').style.display = 'flex';
+  document.getElementById('apiInfo').style.display = 'none';
+  document.getElementById('modelSelect').value = getActiveProvider();
+  document.getElementById('apiKey').value = '';
+  document.getElementById('apiKey').placeholder = '输入 ' + PROVIDERS[getActiveProvider()].name + ' API Key';
+}
+
+function switchModel() {
+  document.getElementById('apiConfig').style.display = 'flex';
+  document.getElementById('apiInfo').style.display = 'none';
+  document.getElementById('modelSelect').value = getActiveProvider();
+  document.getElementById('apiKey').value = '';
+  document.getElementById('apiKey').placeholder = '选择模型后输入对应 API Key';
+}
+
+function showApiInfo() {
+  const config = getActiveConfig();
+  document.getElementById('apiConfig').style.display = 'none';
+  document.getElementById('apiInfo').style.display = 'flex';
+  document.getElementById('apiInfoModel').textContent = config.name + ' \u2713';
+}
+
+// Model selector change: update placeholder
+document.getElementById('modelSelect').addEventListener('change', function() {
+  const name = PROVIDERS[this.value].name;
+  document.getElementById('apiKey').placeholder = '输入 ' + name + ' API Key';
+  document.getElementById('apiKey').value = '';
 });
 
-function showKeyInput() {
-  document.getElementById('apiConfig').style.display = 'flex';
-  document.getElementById('apiKey').value = '';
-}
+document.addEventListener('DOMContentLoaded', () => {
+  const config = getActiveConfig();
+  const saved = getKey();
+  if (saved) {
+    showApiInfo();
+  }
+});
 
 // --- System Prompt ---
 function buildSystemPrompt(scene, direction) {
@@ -600,8 +716,9 @@ async function generate() {
   const input = document.getElementById('userInput').value.trim();
   if (!input) return;
 
+  const config = getActiveConfig();
   let key = getKey();
-  if (!key) { showKeyInput(); return; }
+  if (!key) { editKey(); return; }
 
   const btn = document.getElementById('btnGenerate');
   const loading = document.getElementById('loading');
@@ -622,14 +739,14 @@ async function generate() {
   const tagLabel = labels ? ` · ${labels}` : '';
 
   try {
-    const resp = await fetch('https://api.deepseek.com/chat/completions', {
+    const resp = await fetch(config.endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${key}`
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: config.model,
         messages: [
           { role: 'system', content: sysPrompt },
           { role: 'user', content: input }
@@ -640,8 +757,8 @@ async function generate() {
     });
 
     if (!resp.ok) {
-      if (resp.status === 401) { showKeyInput(); throw new Error('API Key 无效，请重新输入'); }
-      throw new Error(`API 请求失败: ${resp.status}`);
+      if (resp.status === 401) { editKey(); throw new Error(config.name + ' API Key 无效，请重新输入'); }
+      throw new Error('API 请求失败: ' + resp.status);
     }
 
     const data = await resp.json();
