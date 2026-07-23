@@ -76,6 +76,12 @@
     border-color: #8d7b6e;
     color: #fff;
   }
+  .tag-style { border-color: #bcc9d6; }
+  .tag-style.active {
+    background: #5b7f95;
+    border-color: #5b7f95;
+    color: #fff;
+  }
   .tag-label {
     font-size: 11px;
     color: var(--text2);
@@ -528,6 +534,13 @@
     <span class="tag tag-dir" data-tag="主治">主治</span>
     <span class="tag tag-dir" data-tag="乡村全科">乡村全科</span>
   </div>
+  <div class="tags" id="tagBarStyle">
+    <span class="tag-label">语气</span>
+    <span class="tag tag-style active" data-tag="均衡">均衡</span>
+    <span class="tag tag-style" data-tag="定心丸">定心丸</span>
+    <span class="tag tag-style" data-tag="算笔账">算笔账</span>
+    <span class="tag tag-style" data-tag="推一把">推一把</span>
+  </div>
 
   <div class="input-area">
     <textarea id="userInput" placeholder="输入学员的问题或场景...&#10;&#10;比如：学员5月进班，说没时间学，想等书到了再开始"></textarea>
@@ -582,6 +595,7 @@ const STORAGE_ACTIVE = 'zhujiao_ai_active';
 
 let activeScene = '';
 let activeDirection = '';
+let activeStyle = '均衡';
 let lastOutput = '';
 let lastSections = {};
 
@@ -675,6 +689,14 @@ document.getElementById('tagBarDir').addEventListener('click', (e) => {
     activeDirection = val;
   }
 });
+document.getElementById('tagBarStyle').addEventListener('click', (e) => {
+  const tag = e.target.closest('.tag-style');
+  if (!tag) return;
+  const val = tag.dataset.tag;
+  document.querySelectorAll('#tagBarStyle .tag-style').forEach(t => t.classList.remove('active'));
+  tag.classList.add('active');
+  activeStyle = val;
+});
 
 // --- API Key & Model Management ---
 function storageKey(provider) {
@@ -746,9 +768,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- System Prompt ---
-function buildSystemPrompt(scene, direction) {
+function buildSystemPrompt(scene, direction, style) {
   const sceneContext = scene ? `当前会话场景：${scene}。请侧重该场景的话术风格。` : '';
   const dirContext = direction ? getDirectionContext(direction) : '默认为临床方向。';
+  const styleContext = getStyleContext(style);
   if (direction) {
     return `你是一个专业的教育培训行业班主任AI助手，服务于昭昭医考（执业医师培训品牌）。当前服务方向：${direction}。${sceneContext}
 
@@ -759,6 +782,8 @@ function buildSystemPrompt(scene, direction) {
 - 自律困难型 → 给紧迫感+监督方案，不说"自己多努力"
 
 ${dirContext}
+
+${styleContext}
 
 ## 话术输出格式（必须严格遵守）
 每条话术按以下结构输出：
@@ -786,6 +811,8 @@ ${dirContext}
 - 价格敏感型 → 强调价值和保障
 - 效果焦虑型 → 给信心+具体路径
 - 自律困难型 → 给紧迫感+监督方案
+
+${styleContext}
 
 ## 班次体系
 - 基础层：全程班/早鸟班，500人群，微信服务为主
@@ -826,6 +853,34 @@ function getDirectionContext(dir) {
 - 注意：话术要更耐心、更简单直接，避免专业术语堆积，多给鼓励和具体步骤`
   };
   return map[dir] || '';
+}
+
+function getStyleContext(style) {
+  const map = {
+    '均衡': `## 回复语气：均衡模式
+- 共情与方案各占一半，先简单接住情绪，然后快速带出方案
+- 语调自然、专业，像有经验的同事在帮忙
+- 不给压力也不过度安抚，就事论事给解决方案`,
+    '定心丸': `## 回复语气：定心丸模式
+- 核心：先接住情绪，再给方向。学员此刻需要的是"有人懂我"
+- 共情开场要写得特别扎实，让学员觉得你真的理解他的处境
+- 方案要带"我们"而不是"你"——"我们一起看看怎么办"而不是"你应该这样做"
+- 语调温暖、耐心，给安全感。即使对方的问题很简单，也不轻视
+- 避免直接否定（"你这样不行"→"我理解你为什么这样想，同时咱们可以试试…"）`,
+    '算笔账': `## 回复语气：算笔账模式
+- 核心：不推销，不施压，让学员自己把账算明白
+- 用具体的数字、时间、通过率说话，让事实代替你说服
+- 不替学员做决定，而是帮他看清"选A会怎样，选B会怎样"
+- 语调冷静、客观、可信。像财务顾问在帮你分析，不是销售在逼单
+- 每个建议都要有数据支撑（课时数、分值占比、往届案例）`,
+    '推一把': `## 回复语气：推一把模式
+- 核心：不给退路，只下任务。学员此刻需要的不是安慰，是有人替他下决心
+- 话要短、要硬、要有具体截止时间。"今晚做完20道题发我"不是"有空做做题"
+- 可以直接指出问题，不绕弯子，但要带着"我盯你是因为我在乎你的结果"
+- 语调坚定、有压迫感但不凶。像教练在赛前训话，不是老师在骂学生
+- 结尾必须带一个具体的、可执行的行动指令`
+  };
+  return map[style] || map['均衡'];
 }
 
 // --- Render output ---
@@ -935,7 +990,7 @@ async function generate() {
   btnCopy.textContent = '一键复制';
   btnCopy.classList.remove('copied');
 
-  const sysPrompt = buildSystemPrompt(activeScene, activeDirection);
+  const sysPrompt = buildSystemPrompt(activeScene, activeDirection, activeStyle);
   const labels = [activeScene, activeDirection].filter(Boolean).join(' · ');
   const tagLabel = labels ? ` · ${labels}` : '';
 
@@ -1024,8 +1079,11 @@ function clearAll() {
   btn.disabled = false;
   btn.textContent = '生成话术';
   document.querySelectorAll('#tagBarScene .tag, #tagBarDir .tag').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#tagBarStyle .tag-style').forEach(t => t.classList.remove('active'));
+  document.querySelector('#tagBarStyle .tag-style[data-tag="均衡"]').classList.add('active');
   activeScene = '';
   activeDirection = '';
+  activeStyle = '均衡';
 }
 
 // Enter to submit (Ctrl+Enter)
