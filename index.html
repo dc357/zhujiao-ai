@@ -230,6 +230,41 @@
     font-style: normal;
     opacity: 0.75;
   }
+  .section-block {
+    margin-bottom: 10px;
+  }
+  .section-block:last-child {
+    margin-bottom: 0;
+  }
+  .section-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .btn-copy-section {
+    padding: 2px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  .btn-copy-section:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .btn-copy-section.copied {
+    background: #2ecc71;
+    border-color: #2ecc71;
+    color: #fff;
+  }
 
   .api-config {
     display: flex;
@@ -340,6 +375,7 @@ const STORAGE_KEY = 'zhujiao_ai_key';
 let activeScene = '';
 let activeDirection = '';
 let lastOutput = '';
+let lastSections = {};
 
 // --- Tag switching (scene & direction independent) ---
 document.getElementById('tagBarScene').addEventListener('click', (e) => {
@@ -479,21 +515,85 @@ function getDirectionContext(dir) {
 function renderOutput(text) {
   let cleaned = text.replace(/\*\*(.+?)\*\*/g, '【$1】');
   cleaned = cleaned.replace(/\*\*/g, '');
-  const sections = [
-    { key: '共情开场', cls: 'sh-gongqing' },
-    { key: '分点说明', cls: 'sh-fendian' },
-    { key: '具体行动', cls: 'sh-xingdong' },
-    { key: '追问预案', cls: 'sh-zhuiwen' },
-    { key: '风险提示', cls: 'sh-fengxian' }
-  ];
-  let html = cleaned;
-  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  sections.forEach(s => {
-    html = html.replace(new RegExp(`【${s.key}】`, 'g'), `<span class="section-header ${s.cls}">【${s.key}】</span>`);
+
+  const sectionKeys = ['共情开场', '分点说明', '具体行动', '追问预案', '风险提示'];
+  const classMap = {
+    '共情开场': 'sh-gongqing',
+    '分点说明': 'sh-fendian',
+    '具体行动': 'sh-xingdong',
+    '追问预案': 'sh-zhuiwen',
+    '风险提示': 'sh-fengxian'
+  };
+
+  const sections = {};
+  let htmlParts = [];
+
+  sectionKeys.forEach((key, i) => {
+    const marker = '【' + key + '】';
+    const start = cleaned.indexOf(marker);
+    if (start === -1) return;
+
+    const contentStart = start + marker.length;
+    const nextKey = sectionKeys[i + 1];
+    let end;
+    if (nextKey) {
+      end = cleaned.indexOf('【' + nextKey + '】', contentStart);
+    }
+    if (!end || end === -1) end = cleaned.length;
+
+    const rawContent = cleaned.substring(contentStart, end).trim();
+    sections[key] = rawContent;
+
+    let escapedContent = rawContent
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    escapedContent = escapedContent.replace(/(Q"[^"]+")/g, '<em>$1</em>');
+
+    htmlParts.push(
+      '<div class="section-block">' +
+      '<div class="section-row">' +
+      '<span class="section-header ' + classMap[key] + '">【' + key + '】</span>' +
+      '<button class="btn-copy-section" data-section="' + key + '">复制此段</button>' +
+      '</div>' +
+      '<div class="section-body">' + escapedContent + '</div>' +
+      '</div>'
+    );
   });
-  html = html.replace(/(Q"[^"]+")/g, '<em>$1</em>');
-  return { html, plain: cleaned };
+
+  return { html: htmlParts.join(''), plain: cleaned, sections };
 }
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove('copied');
+    }, 1500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const orig = btn.textContent;
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+// Section copy via event delegation
+document.getElementById('outputArea').addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-copy-section');
+  if (!btn) return;
+  const section = btn.dataset.section;
+  const text = lastSections[section] || '';
+  copyText(text, btn);
+});
 
 // --- Generate ---
 async function generate() {
@@ -548,6 +648,7 @@ async function generate() {
     const raw = data.choices[0].message.content;
     const rendered = renderOutput(raw);
     lastOutput = rendered.plain;
+    lastSections = rendered.sections;
 
     outputContent.innerHTML = rendered.html;
     outputLabel.textContent = `生成结果${tagLabel}`;
@@ -599,6 +700,7 @@ function clearAll() {
   document.getElementById('btnCopy').textContent = '一键复制';
   document.getElementById('btnCopy').classList.remove('copied');
   lastOutput = '';
+  lastSections = {};
   document.getElementById('loading').style.display = 'none';
   const btn = document.getElementById('btnGenerate');
   btn.disabled = false;
