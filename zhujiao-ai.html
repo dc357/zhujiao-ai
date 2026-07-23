@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>班主任AI话术助手</title>
+<style>
+  :root {
+    --bg: #f6f0e8;
+    --card: #fffdf9;
+    --input: #faf6ef;
+    --accent: #c9896e;
+    --text: #3e3232;
+    --text2: #9a8c82;
+    --border: #e0d5c8;
+    --tag-bg: #efe6da;
+    --tag-active: #c9896e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+  .container {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  header {
+    text-align: center;
+    padding: 12px 0 4px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  header p {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .tag {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--tag-bg);
+    color: var(--text2);
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .tag.active {
+    background: var(--tag-active);
+    color: #fff;
+    border-color: var(--tag-active);
+  }
+  .tag-dir { border-color: #c8c0b5; }
+  .tag-dir.active {
+    background: #8d7b6e;
+    border-color: #8d7b6e;
+    color: #fff;
+  }
+  .tag-label {
+    font-size: 11px;
+    color: var(--text2);
+    opacity: 0.6;
+    margin: 0 4px;
+    align-self: center;
+  }
+
+  .input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--input);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    resize: vertical;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus {
+    border-color: var(--accent);
+  }
+  textarea::placeholder {
+    color: #adb5bd;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+  }
+  .btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-generate {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-generate:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-generate:hover:not(:disabled) {
+    background: #b0755c;
+  }
+  .btn-clear {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-clear:hover {
+    background: #efe6da;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 24px;
+    color: var(--text2);
+    font-size: 14px;
+  }
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .output-area {
+    display: none;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    border: 1px solid var(--border);
+  }
+  .output-area.show { display: block; }
+  .output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .output-label {
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .btn-copy {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn-copy:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-copy.copied {
+    background: #2ecc71;
+    border-color: #2ecc71;
+    color: #fff;
+  }
+  .output-content {
+    font-size: 14px;
+    line-height: 1.9;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text);
+  }
+  .section-header {
+    display: block;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 6px 0 2px;
+    margin-top: 12px;
+  }
+  .section-header:first-child { margin-top: 0; }
+  .sh-gongqing  { color: #d4876e; }
+  .sh-fendian   { color: #7a9b8e; }
+  .sh-xingdong  { color: #8b9e6a; }
+  .sh-zhuiwen   { color: #9b8aba; }
+  .sh-fengxian  { color: #c47a7a; }
+  .output-content em {
+    display: block;
+    margin: 2px 0 2px 12px;
+    font-style: normal;
+    opacity: 0.75;
+  }
+
+  .api-config {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .api-config input {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--input);
+    color: var(--text);
+    font-size: 13px;
+    width: 280px;
+    outline: none;
+    font-family: inherit;
+  }
+  .api-config input:focus {
+    border-color: var(--accent);
+  }
+  .api-config .btn-save {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    background: #e9ecef;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .api-config .btn-save:hover {
+    background: #dee2e6;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text2);
+    opacity: 0.5;
+    padding: 8px;
+  }
+
+  @media (max-width: 400px) {
+    .container { gap: 12px; }
+    textarea { min-height: 80px; font-size: 14px; }
+    .tag { padding: 5px 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>班主任AI话术助手</h1>
+    <p>输入学员场景 · 一键生成话术 · 复制即用</p>
+  </header>
+
+  <div class="api-config" id="apiConfig">
+    <input type="password" id="apiKey" placeholder="输入 DeepSeek API Key" autocomplete="off">
+    <button class="btn-save" onclick="saveKey()">保存</button>
+  </div>
+
+  <div class="tags" id="tagBarScene">
+    <span class="tag" data-tag="异议处理">异议处理</span>
+    <span class="tag" data-tag="日常督学">日常督学</span>
+    <span class="tag" data-tag="班次转化">班次转化</span>
+    <span class="tag" data-tag="考后服务">考后服务</span>
+    <span class="tag" data-tag="投诉售后">投诉售后</span>
+    <span class="tag" data-tag="转介绍">转介绍</span>
+    <span class="tag" data-tag="首通电话">首通电话</span>
+    <span class="tag" data-tag="情绪安抚">情绪安抚</span>
+  </div>
+  <div class="tags" id="tagBarDir">
+    <span class="tag-label">方向</span>
+    <span class="tag tag-dir" data-tag="临床">临床</span>
+    <span class="tag tag-dir" data-tag="中医">中医</span>
+    <span class="tag tag-dir" data-tag="中西医">中西医</span>
+    <span class="tag tag-dir" data-tag="主治">主治</span>
+    <span class="tag tag-dir" data-tag="乡村全科">乡村全科</span>
+  </div>
+
+  <div class="input-area">
+    <textarea id="userInput" placeholder="输入学员的问题或场景...&#10;&#10;比如：学员5月进班，说没时间学，想等书到了再开始"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-generate" id="btnGenerate" onclick="generate()">生成话术</button>
+      <button class="btn btn-clear" onclick="clearAll()">清空</button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading" style="display:none">
+    <span class="spinner"></span>正在生成话术...
+  </div>
+
+  <div class="output-area" id="outputArea">
+    <div class="output-header">
+      <span class="output-label" id="outputLabel">生成结果</span>
+      <button class="btn-copy" id="btnCopy" onclick="copyOutput()">一键复制</button>
+    </div>
+    <div class="output-content" id="outputContent"></div>
+  </div>
+
+  <footer>昭昭医考 · 班主任AI助手 v1.0</footer>
+</div>
+
+<script>
+const STORAGE_KEY = 'zhujiao_ai_key';
+let activeScene = '';
+let activeDirection = '';
+let lastOutput = '';
+
+// --- Tag switching (scene & direction independent) ---
+document.getElementById('tagBarScene').addEventListener('click', (e) => {
+  const tag = e.target.closest('.tag');
+  if (!tag) return;
+  const val = tag.dataset.tag;
+  if (activeScene === val) {
+    tag.classList.remove('active');
+    activeScene = '';
+  } else {
+    document.querySelectorAll('#tagBarScene .tag').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+    activeScene = val;
+  }
+});
+document.getElementById('tagBarDir').addEventListener('click', (e) => {
+  const tag = e.target.closest('.tag');
+  if (!tag) return;
+  const val = tag.dataset.tag;
+  if (activeDirection === val) {
+    tag.classList.remove('active');
+    activeDirection = '';
+  } else {
+    document.querySelectorAll('#tagBarDir .tag').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+    activeDirection = val;
+  }
+});
+
+// --- API Key ---
+function getKey() {
+  return localStorage.getItem(STORAGE_KEY) || '';
+}
+function saveKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { alert('请输入 API Key'); return; }
+  localStorage.setItem(STORAGE_KEY, key);
+  document.getElementById('apiConfig').style.display = 'none';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = getKey();
+  if (saved) {
+    document.getElementById('apiKey').value = saved.substring(0, 8) + '...';
+    document.getElementById('apiConfig').style.display = 'none';
+  }
+});
+
+function showKeyInput() {
+  document.getElementById('apiConfig').style.display = 'flex';
+  document.getElementById('apiKey').value = '';
+}
+
+// --- System Prompt ---
+function buildSystemPrompt(scene, direction) {
+  const sceneContext = scene ? `当前会话场景：${scene}。请侧重该场景的话术风格。` : '';
+  const dirContext = direction ? getDirectionContext(direction) : '默认为临床方向。';
+  if (direction) {
+    return `你是一个专业的教育培训行业班主任AI助手，服务于昭昭医考（执业医师培训品牌）。当前服务方向：${direction}。${sceneContext}
+
+## 服务哲学
+"先搞定人，再搞定问题"——同一个问题，不同类型的学员需要不同回应。生成前先判断：
+- 价格敏感型 → 强调价值和保障，不说"已经很便宜了"
+- 效果焦虑型 → 给信心+具体路径，不说"放心会过的"
+- 自律困难型 → 给紧迫感+监督方案，不说"自己多努力"
+
+${dirContext}
+
+## 话术输出格式（必须严格遵守）
+每条话术按以下结构输出：
+
+\`\`\`
+【共情开场】1-2句接住情绪，让学员觉得你站在他那边
+【分点说明】结构化解答，每点一个信息，不要塞成一段
+【具体行动】告诉他接下来做什么，带操作细节
+【追问预案】预判2-3个他可能追问的问题+简短应答
+【风险提示】什么话不能说、什么情况要上报
+\`\`\`
+
+## 核心原则
+- ✅ 给具体操作，不给空话（"把消化的前3节0.75倍速看一遍" 而不是 "多听几遍就好了"）
+- ✅ 用短句，口语化，像同事在帮你想办法
+- ✅ 每句话带行动指令
+- ❌ 绝对禁止："老师已经讲得很好了""你再试试看""多听几遍就好了""就这样安排的吧"
+- ❌ 不要替公司辩解，不要说教，不要绕圈子
+- ❌ 不要使用Markdown格式（禁止 **加粗**、禁止 - 列表符号），用【】标注重点即可`;
+  }
+  return `你是一个专业的教育培训行业班主任AI助手，服务于昭昭医考（执业医师考试培训品牌）。默认临床方向。${sceneContext}
+
+## 服务哲学
+"先搞定人，再搞定问题"。
+- 价格敏感型 → 强调价值和保障
+- 效果焦虑型 → 给信心+具体路径
+- 自律困难型 → 给紧迫感+监督方案
+
+## 班次体系
+- 基础层：全程班/早鸟班，500人群，微信服务为主
+- 中端层：助力班/进阶班（含8天7夜+5天4夜线下面授），300人群，每月1次电话+3次微信
+- 高端层：VIP精诚/尊享/带学班，260人以下，每月2次电话+2次微信，一对一规划
+
+## 话术输出格式
+【共情开场】→【分点说明】→【具体行动】→【追问预案】→【风险提示】
+
+## 核心原则
+- ✅ 给具体操作，不给空话
+- ❌ 禁止："老师已经讲得很好了""多听几遍就好了""就这样安排的吧"
+- ❌ 不替公司辩解，不说教，不绕圈子
+- ❌ 不要使用Markdown格式（禁止 **加粗**、禁止 - 列表符号），用【】标注重点即可`;
+}
+
+function getDirectionContext(dir) {
+  const map = {
+    '临床': `## ${dir}方向背景
+- 考试：执业/助理医师，技能6月+笔试8月，临床医学综合为主
+- 班次：全程班(基础)、助力班/进阶班(含8天7夜+5天4夜面授)、VIP精诚/尊享/带学(高端一对一)
+- 学员特点：80%县级及以下基层临床医生，基础参差，备考时间碎片化`,
+    '中医': `## ${dir}方向背景
+- 考试：中医执业/助理医师，考四大经典（内经/伤寒/金匮/温病）+ 中医基础/诊断/中药/方剂/针灸等
+- 学员特点：部分为师承或确有专长出身，理论基础差异大，需要记忆大量经典条文
+- 注意：话术中可提及中医备考的记忆方法和经典考点梳理`,
+    '中西医': `## ${dir}方向背景
+- 考试：中西医结合执业/助理医师，同时考中医基础和西医临床，知识量最大
+- 学员特点：双线备考压力大，最常问"中医和西医怎么分配时间""重点看哪边"
+- 注意：话术中要体现对双科压力的理解，给出时间分配建议`,
+    '主治': `## ${dir}方向背景
+- 考试：主治医师（中级职称），分亚专业（内科/外科/妇产/儿科等），笔试约4月
+- 学员特点：全部在职，时间极紧，已有执业证，不是"能不能过"而是"怎么高效过"
+- 注意：话术要简洁高效，强调应试技巧和时间管理，不说"基础薄弱"这类话`,
+    '乡村全科': `## ${dir}方向背景
+- 考试：乡村全科执业助理医师，笔试约8月，含公共卫生+全科医疗+中医基础
+- 学员特点：多为村卫生室或乡镇卫生院从业者，基础薄弱，年龄偏大，学习能力较弱
+- 注意：话术要更耐心、更简单直接，避免专业术语堆积，多给鼓励和具体步骤`
+  };
+  return map[dir] || '';
+}
+
+// --- Render output ---
+function renderOutput(text) {
+  let cleaned = text.replace(/\*\*(.+?)\*\*/g, '【$1】');
+  cleaned = cleaned.replace(/\*\*/g, '');
+  const sections = [
+    { key: '共情开场', cls: 'sh-gongqing' },
+    { key: '分点说明', cls: 'sh-fendian' },
+    { key: '具体行动', cls: 'sh-xingdong' },
+    { key: '追问预案', cls: 'sh-zhuiwen' },
+    { key: '风险提示', cls: 'sh-fengxian' }
+  ];
+  let html = cleaned;
+  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  sections.forEach(s => {
+    html = html.replace(new RegExp(`【${s.key}】`, 'g'), `<span class="section-header ${s.cls}">【${s.key}】</span>`);
+  });
+  html = html.replace(/(Q"[^"]+")/g, '<em>$1</em>');
+  return { html, plain: cleaned };
+}
+
+// --- Generate ---
+async function generate() {
+  const input = document.getElementById('userInput').value.trim();
+  if (!input) return;
+
+  let key = getKey();
+  if (!key) { showKeyInput(); return; }
+
+  const btn = document.getElementById('btnGenerate');
+  const loading = document.getElementById('loading');
+  const outputArea = document.getElementById('outputArea');
+  const outputContent = document.getElementById('outputContent');
+  const outputLabel = document.getElementById('outputLabel');
+  const btnCopy = document.getElementById('btnCopy');
+
+  btn.disabled = true;
+  btn.textContent = '生成中...';
+  loading.style.display = 'block';
+  outputArea.classList.remove('show');
+  btnCopy.textContent = '一键复制';
+  btnCopy.classList.remove('copied');
+
+  const sysPrompt = buildSystemPrompt(activeScene, activeDirection);
+  const labels = [activeScene, activeDirection].filter(Boolean).join(' · ');
+  const tagLabel = labels ? ` · ${labels}` : '';
+
+  try {
+    const resp = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: sysPrompt },
+          { role: 'user', content: input }
+        ],
+        temperature: 0.8,
+        max_tokens: 1200
+      })
+    });
+
+    if (!resp.ok) {
+      if (resp.status === 401) { showKeyInput(); throw new Error('API Key 无效，请重新输入'); }
+      throw new Error(`API 请求失败: ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    const raw = data.choices[0].message.content;
+    const rendered = renderOutput(raw);
+    lastOutput = rendered.plain;
+
+    outputContent.innerHTML = rendered.html;
+    outputLabel.textContent = `生成结果${tagLabel}`;
+    outputArea.classList.add('show');
+  } catch (err) {
+    outputContent.textContent = `错误: ${err.message}`;
+    outputLabel.textContent = '生成失败';
+    outputArea.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '生成话术';
+    loading.style.display = 'none';
+  }
+}
+
+// --- Copy ---
+function copyOutput() {
+  if (!lastOutput) return;
+  navigator.clipboard.writeText(lastOutput).then(() => {
+    const btn = document.getElementById('btnCopy');
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '一键复制';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    // fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = lastOutput;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('btnCopy');
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '一键复制'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// --- Clear ---
+function clearAll() {
+  document.getElementById('userInput').value = '';
+  document.getElementById('outputArea').classList.remove('show');
+  document.getElementById('outputContent').textContent = '';
+  document.getElementById('outputLabel').textContent = '生成结果';
+  document.getElementById('btnCopy').textContent = '一键复制';
+  document.getElementById('btnCopy').classList.remove('copied');
+  lastOutput = '';
+  document.getElementById('loading').style.display = 'none';
+  const btn = document.getElementById('btnGenerate');
+  btn.disabled = false;
+  btn.textContent = '生成话术';
+  document.querySelectorAll('#tagBarScene .tag, #tagBarDir .tag').forEach(t => t.classList.remove('active'));
+  activeScene = '';
+  activeDirection = '';
+}
+
+// Enter to submit (Ctrl+Enter)
+document.getElementById('userInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.ctrlKey) {
+    e.preventDefault();
+    generate();
+  }
+});
+</script>
+</body>
+</html>
