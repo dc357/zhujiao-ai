@@ -31,18 +31,11 @@
     max-width: 600px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 16px;
   }
   header {
     text-align: center;
-    padding: 8px 0 2px;
-  }
-  .header-top {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    padding: 12px 0 4px;
   }
   header h1 {
     font-size: 22px;
@@ -50,69 +43,26 @@
     letter-spacing: 1px;
   }
   header p {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text2);
-    margin-top: 2px;
-  }
-  .api-inline {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-  }
-  .api-info-model {
-    padding: 2px 8px;
-    border-radius: 4px;
-    background: #e8f5e9;
-    color: #2e7d32;
-    font-weight: 600;
-    font-size: 11px;
-  }
-  .btn-inline {
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text2);
-    font-size: 10px;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.2s;
-  }
-  .btn-inline:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .btn-inline-setup {
-    padding: 2px 8px;
-    border-radius: 4px;
-    border: 1px dashed var(--accent);
-    background: transparent;
-    color: var(--accent);
-    font-size: 11px;
-    cursor: pointer;
-    font-family: inherit;
-  }
-  .btn-inline-setup:hover {
-    background: var(--accent);
-    color: #fff;
+    margin-top: 4px;
   }
 
   .tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     justify-content: center;
   }
-  .tags-row2 { gap: 4px; }
   .tag {
-    padding: 4px 10px;
-    border-radius: 16px;
-    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
     cursor: pointer;
     border: 1px solid var(--border);
     background: var(--tag-bg);
     color: var(--text2);
-    transition: all 0.15s;
+    transition: all 0.2s;
     user-select: none;
   }
   .tag.active {
@@ -132,11 +82,11 @@
     border-color: #5b7f95;
     color: #fff;
   }
-  .tag-sep {
-    color: #d0c8be;
-    font-size: 13px;
-    user-select: none;
-    margin: 0 2px;
+  .tag-label {
+    font-size: 11px;
+    color: var(--text2);
+    opacity: 0.6;
+    margin: 0 4px;
     align-self: center;
   }
 
@@ -497,6 +447,38 @@
   .api-config .btn-save:hover {
     background: #b0755c;
   }
+  .api-info {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .api-info-model {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .btn-edit-key, .btn-switch-model {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn-edit-key:hover, .btn-switch-model:hover {
+    background: var(--tag-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 
   footer {
     text-align: center;
@@ -516,25 +498,22 @@
 <body>
 <div class="container">
   <header>
-    <div class="header-top">
-      <h1>班主任AI话术助手</h1>
-      <div class="api-inline" id="apiInline" style="display:none">
-        <span class="api-info-model" id="apiInfoModel"></span>
-        <button class="btn-inline" onclick="switchModel()">换模型</button>
-        <button class="btn-inline" onclick="editKey()">改Key</button>
-      </div>
-      <button class="btn-inline-setup" id="btnSetup" onclick="editKey()">设置API</button>
-    </div>
+    <h1>班主任AI话术助手</h1>
     <p>输入学员场景 · 一键生成话术 · 复制即用</p>
   </header>
 
-  <div class="api-config" id="apiConfig" style="display:none">
+  <div class="api-config" id="apiConfig">
     <select id="modelSelect">
       <option value="deepseek">DeepSeek</option>
       <option value="kimi">Kimi（月之暗面）</option>
     </select>
     <input type="password" id="apiKey" placeholder="输入 API Key" autocomplete="off">
     <button class="btn-save" onclick="saveKey()">保存</button>
+  </div>
+  <div class="api-info" id="apiInfo" style="display:none">
+    <span class="api-info-model" id="apiInfoModel"></span>
+    <button class="btn-switch-model" onclick="switchModel()">切换模型</button>
+    <button class="btn-edit-key" onclick="editKey()">修改Key</button>
   </div>
 
   <div class="tags" id="tagBarScene">
@@ -547,13 +526,16 @@
     <span class="tag" data-tag="首通电话">首通电话</span>
     <span class="tag" data-tag="情绪安抚">情绪安抚</span>
   </div>
-  <div class="tags tags-row2" id="tagBarDir">
+  <div class="tags" id="tagBarDir">
+    <span class="tag-label">方向</span>
     <span class="tag tag-dir" data-tag="临床">临床</span>
     <span class="tag tag-dir" data-tag="中医">中医</span>
     <span class="tag tag-dir" data-tag="中西医">中西医</span>
     <span class="tag tag-dir" data-tag="主治">主治</span>
     <span class="tag tag-dir" data-tag="乡村全科">乡村全科</span>
-    <span class="tag-sep">|</span>
+  </div>
+  <div class="tags" id="tagBarStyle">
+    <span class="tag-label">语气</span>
     <span class="tag tag-style active" data-tag="均衡">均衡</span>
     <span class="tag tag-style" data-tag="定心丸">定心丸</span>
     <span class="tag tag-style" data-tag="算笔账">算笔账</span>
@@ -695,14 +677,6 @@ document.getElementById('tagBarScene').addEventListener('click', (e) => {
   }
 });
 document.getElementById('tagBarDir').addEventListener('click', (e) => {
-  const styleTag = e.target.closest('.tag-style');
-  if (styleTag) {
-    const val = styleTag.dataset.tag;
-    document.querySelectorAll('#tagBarDir .tag-style').forEach(t => t.classList.remove('active'));
-    styleTag.classList.add('active');
-    activeStyle = val;
-    return;
-  }
   const tag = e.target.closest('.tag');
   if (!tag) return;
   const val = tag.dataset.tag;
@@ -710,10 +684,18 @@ document.getElementById('tagBarDir').addEventListener('click', (e) => {
     tag.classList.remove('active');
     activeDirection = '';
   } else {
-    document.querySelectorAll('#tagBarDir .tag:not(.tag-style)').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#tagBarDir .tag').forEach(t => t.classList.remove('active'));
     tag.classList.add('active');
     activeDirection = val;
   }
+});
+document.getElementById('tagBarStyle').addEventListener('click', (e) => {
+  const tag = e.target.closest('.tag-style');
+  if (!tag) return;
+  const val = tag.dataset.tag;
+  document.querySelectorAll('#tagBarStyle .tag-style').forEach(t => t.classList.remove('active'));
+  tag.classList.add('active');
+  activeStyle = val;
 });
 
 // --- API Key & Model Management ---
@@ -749,8 +731,7 @@ function saveKey() {
 
 function editKey() {
   document.getElementById('apiConfig').style.display = 'flex';
-  document.getElementById('apiInline').style.display = 'none';
-  document.getElementById('btnSetup').style.display = 'none';
+  document.getElementById('apiInfo').style.display = 'none';
   document.getElementById('modelSelect').value = getActiveProvider();
   document.getElementById('apiKey').value = '';
   document.getElementById('apiKey').placeholder = '输入 ' + PROVIDERS[getActiveProvider()].name + ' API Key';
@@ -758,8 +739,7 @@ function editKey() {
 
 function switchModel() {
   document.getElementById('apiConfig').style.display = 'flex';
-  document.getElementById('apiInline').style.display = 'none';
-  document.getElementById('btnSetup').style.display = 'none';
+  document.getElementById('apiInfo').style.display = 'none';
   document.getElementById('modelSelect').value = getActiveProvider();
   document.getElementById('apiKey').value = '';
   document.getElementById('apiKey').placeholder = '选择模型后输入对应 API Key';
@@ -768,8 +748,7 @@ function switchModel() {
 function showApiInfo() {
   const config = getActiveConfig();
   document.getElementById('apiConfig').style.display = 'none';
-  document.getElementById('apiInline').style.display = 'flex';
-  document.getElementById('btnSetup').style.display = 'none';
+  document.getElementById('apiInfo').style.display = 'flex';
   document.getElementById('apiInfoModel').textContent = config.name + ' \u2713';
 }
 
@@ -1099,9 +1078,9 @@ function clearAll() {
   const btn = document.getElementById('btnGenerate');
   btn.disabled = false;
   btn.textContent = '生成话术';
-  document.querySelectorAll('#tagBarScene .tag, #tagBarDir .tag:not(.tag-style)').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('#tagBarDir .tag-style').forEach(t => t.classList.remove('active'));
-  document.querySelector('#tagBarDir .tag-style[data-tag="均衡"]').classList.add('active');
+  document.querySelectorAll('#tagBarScene .tag, #tagBarDir .tag').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#tagBarStyle .tag-style').forEach(t => t.classList.remove('active'));
+  document.querySelector('#tagBarStyle .tag-style[data-tag="均衡"]').classList.add('active');
   activeScene = '';
   activeDirection = '';
   activeStyle = '均衡';
