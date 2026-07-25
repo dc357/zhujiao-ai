@@ -581,7 +581,7 @@
 const PROVIDERS = {
   deepseek: {
     name: 'DeepSeek',
-    endpoint: 'https://api.deepseek.com/chat/completions',
+    endpoint: 'https://api.deepseek.com/v1/chat/completions',
     model: 'deepseek-chat'
   },
   kimi: {
@@ -1014,7 +1014,10 @@ async function generate() {
 
     if (!resp.ok) {
       if (resp.status === 401) { editKey(); throw new Error(config.name + ' API Key 无效，请重新输入'); }
-      throw new Error('API 请求失败: ' + resp.status);
+      const errBody = await resp.text();
+      let errMsg = '';
+      try { errMsg = JSON.parse(errBody).error?.message || ''; } catch(e) {}
+      throw new Error(`API 请求失败 ${resp.status}${errMsg ? ': ' + errMsg : ''}`);
     }
 
     const data = await resp.json();
